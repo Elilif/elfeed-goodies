@@ -20,6 +20,11 @@
 (require 'powerline)
 (require 'cl-lib)
 
+(defcustom elfeed-goodies/date-format "%d-%m-%Y"
+  "Date format of the entry."
+  :group 'elfeed-goodies
+  :type 'string)
+
 (defcustom elfeed-goodies/feed-source-column-width 16
   "Width of the feed source column."
   :group 'elfeed-goodies
@@ -96,9 +101,10 @@ STATS as a list
 DB-TIME as a Lisp timestamp."
   (let* ((update (format-time-string "%Y-%m-%d %H:%M:%S %z" db-time))
          (lhs (list
-               (powerline-raw (-pad-string-to "Feed" (- elfeed-goodies/feed-source-column-width 4)) 'powerline-active1 'l)
+			   (powerline-raw (-pad-string-to "Date" (- elfeed-goodies/feed-source-column-width 9)) 'powerline-active1 'l)
+               (powerline-raw (-pad-string-to "Feed" (- elfeed-goodies/feed-source-column-width 5)) 'powerline-active1 'l)
                (funcall separator-left 'powerline-active1 'powerline-active2)
-               (powerline-raw (-pad-string-to "Tags" (- elfeed-goodies/tag-column-width 6)) 'powerline-active2 'l)
+               (powerline-raw (-pad-string-to "Tags" (- elfeed-goodies/tag-column-width 5)) 'powerline-active2 'l)
                (funcall separator-left 'powerline-active2 'mode-line)
                (powerline-raw "Subject" 'mode-line 'l)))
          (rhs (search-header/rhs separator-left separator-right search-filter stats update)))
@@ -106,6 +112,11 @@ DB-TIME as a Lisp timestamp."
     (concat (powerline-render lhs)
             (powerline-fill 'mode-line (powerline-width rhs))
             (powerline-render rhs))))
+
+(defun elfeed-goodies/feed-entry-date->string (feed-entry-date)
+  "Convert a FEED-ENTRY-DATE to a string using `elfeed-goodies/date-format'."
+  (format-time-string elfeed-goodies/date-format
+					  (seconds-to-time feed-entry-date)))
 
 (defun search-header/draw-tight (separator-left separator-right search-filter stats db-time)
   "Draw header-line when window is less than `elfeed-goodies/wide-threshold'.
@@ -147,6 +158,7 @@ DB-TIME as a Lisp timestamp."
   "Print ENTRY to the buffer."
   (let* ((title (or (elfeed-meta entry :title) (elfeed-entry-title entry) ""))
          (title-faces (elfeed-search--faces (elfeed-entry-tags entry)))
+		 (date-entry (elfeed-goodies/feed-entry-date->string (elfeed-entry-date entry)))
          (feed (elfeed-entry-feed entry))
          (feed-title
           (when feed
@@ -174,6 +186,7 @@ DB-TIME as a Lisp timestamp."
 
     (if (>= (window-width) (* (frame-width) elfeed-goodies/wide-threshold))
         (progn
+		  (insert (propertize date-entry 'face 'elfeed-search-tag-face) "  ")
           (insert (propertize feed-column 'face 'elfeed-search-feed-face) " ")
           (insert (propertize tag-column 'face 'elfeed-search-tag-face) " ")
           (insert (propertize title 'face title-faces 'kbd-help title)))
